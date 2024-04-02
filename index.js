@@ -1,48 +1,62 @@
-<!-- views/donate.ejs -->
+// app.js
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donate</title>
-</head>
-<body>
-    <h1>Donate Money</h1>
-    <form method="POST" id="paymentForm">
-        <div>
-            <label for="mobile">Mobile Number:</label>
-            <input type="text" id="mobile" name="mobile" required>
-        </div>
-        <div>
-            <label for="orgname">Organization Name:</label>
-            <input type="text" id="orgname" name="orgname" required>
-        </div>
-        <div>
-            <label for="amount">Amount:</label>
-            <input type="number" id="amount" name="amount" required>
-        </div>
-        <button type="submit">Donate</button>
-    </form>
+const express = require('express');
+const bodyParser = require('body-parser');
 
-    <script>
-        document.getElementById('paymentForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent form submission
-            const formData = new FormData(this);
-            fetch('/initiate-payment', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Redirect to UPI payment app with generated UPI link
-                window.location.href = data.upiLink;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while processing your donation. Please try again later.');
-            });
-        });
-    </script>
-</body>
-</html>
+const app = express();
+app.set('view engine', 'ejs');
+app.use(express.static(__dirname + '/public'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
+// Function to generate UPI payment link
+function generateUPILink(mobile, orgname, amount) {
+    return `upi://pay?pa=${mobile}@upi&pn=${orgname}&am=${amount}&cu=INR`;
+}
+
+// Route to render donation form
+app.get('/donate', (req, res) => {
+    res.render('donate');
+});
+
+// Route to initiate UPI payment
+app.post('/initiate-payment', (req, res) => {
+    const { mobile, orgname, amount } = req.body;
+    console.log(mobile,orgname,amount);
+    // Check if all required parameters are present
+    if (!mobile || !orgname || !amount) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    // Assuming amount is passed as a string, you may need to convert it to a number
+    const amountNumber = parseFloat(amount);
+
+    // Check if amount is a valid number
+    if (isNaN(amountNumber) || amountNumber <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    // Generate UPI payment link
+    const upiLink = generateUPILink(mobile, orgname, amountNumber);
+    
+    // Send UPI payment link to frontend
+    res.json({ upiLink });
+});
+// Route to handle payment callback
+app.post('/payment-callback', (req, res) => {
+    // Parse the payment status from the request
+    const { transactionId, status, amount } = req.body;
+
+    // Update the payment status in the database
+    // Perform necessary actions based on the payment status
+
+    // Send response back to the payment service provider
+    res.sendStatus(200);
+});
+
+// Start the server
+const port = 3000;
+app.listen(port, () => {
+    console.log(`Server is listening on port ${port}`);
+});
