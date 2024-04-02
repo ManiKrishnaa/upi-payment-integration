@@ -22,10 +22,26 @@ app.get('/donate', (req, res) => {
 // Route to initiate UPI payment
 app.post('/initiate-payment', (req, res) => {
     const { mobile, orgname, amount } = req.body;
-    const upiLink = generateUPILink(mobile, orgname, amount);
-    res.json({ upiLink }); // Send UPI payment link to frontend
-});
+    
+    // Check if all required parameters are present
+    if (!mobile || !orgname || !amount) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
 
+    // Assuming amount is passed as a string, you may need to convert it to a number
+    const amountNumber = parseFloat(amount);
+
+    // Check if amount is a valid number
+    if (isNaN(amountNumber) || amountNumber <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    // Generate UPI payment link
+    const upiLink = generateUPILink(mobile, orgname, amountNumber);
+    
+    // Send UPI payment link to frontend
+    res.json({ upiLink });
+});
 // Route to handle payment callback
 app.post('/payment-callback', (req, res) => {
     // Parse the payment status from the request
